@@ -189,6 +189,12 @@ OSCdef( \rcvPeakRMS,
 
 	path = "/sdcard/patch_loaded.sh";
 
+	MIDIClient.init(1,1,false);
+
+	sources = MIDIClient.sources;	
+
+	MIDIIn.connect(0, MIDI.findPort("ttymidi", "MIDI in"));
+
 	if (File.exists(path)) {
 
 		patch_loaded = File(path, "r");
@@ -201,13 +207,9 @@ OSCdef( \rcvPeakRMS,
 			});
 		});
 
-		MIDIClient.init(1,1,false);
-
-		sources = MIDIClient.sources;
-
 		sources.do({arg item;
 			if(item.device == devicesetting, {
-				MIDIIn.connect(0, MIDIIn.findPort(item.device, item.name));
+				MIDIIn.connect(1, MIDIIn.findPort(item.device, item.name));
 			});
 		})
 	}
