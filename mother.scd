@@ -193,7 +193,7 @@ OSCdef( \rcvPeakRMS,
 
 	sources = MIDIClient.sources;	
 
-	MIDIIn.connect(0, MIDI.findPort("ttymidi", "MIDI in"));
+	MIDIIn.connect(0, MIDIIn.findPort("ttymidi", "MIDI in"));
 
 	if (File.exists(path)) {
 
