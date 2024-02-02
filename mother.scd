@@ -189,7 +189,7 @@ OSCdef( \rcvPeakRMS,
 
 	path = "/sdcard/patch_loaded.sh";
 
-	MIDIClient.init(1,1,false);
+	MIDIClient.init(nil,nil,false);
 
 	sources = MIDIClient.sources;	
 
