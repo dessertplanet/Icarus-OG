@@ -1,59 +1,51 @@
 #!/bin/sh
 
-export USER_DIR=${USER_DIR:="/usbdrive"}
+# Installer for Organelle OS 5.x (Raspberry Pi OS bookworm, CM3/CM4 based Organelle M/S/S2).
+# Run by install_package.sh when the .zop is installed, or manually from the patch directory.
+
+export FW_DIR=${FW_DIR:="$HOME/fw_dir"}
 export DEBIAN_FRONTEND=noninteractive
+
+status() {
+    oscsend localhost 4001 /oled/aux/line/1 s "$1"
+    oscsend localhost 4001 /oled/aux/line/2 s "$2"
+    echo "$1 $2"
+}
+
+fail() {
+    status "install failed" "$1"
+    sudo $FW_DIR/scripts/remount-ro.sh
+    cd ..
+    rm -rf "$PATCH_INSTALL_DIR"
+    exit 128
+}
+
+PATCH_INSTALL_DIR="$1"
 
 grep -q 'ID=archarm' /etc/os-release
 
-if [ $? -eq 0 ]; then 
-    oscsend localhost 4001 /oled/aux/Clear ii 3 1
-    oscsend localhost 4001 /oled/aux/line/1 s "not valid for"
-    oscsend localhost 4001 /oled/aux/line/2 s "organelle-1"
+if [ $? -eq 0 ]; then
+    status "not valid for" "organelle-1"
     cd ..
-    rm -rf $1
+    rm -rf "$PATCH_INSTALL_DIR"
     exit 128
-fi 
-
-if ! [ -f /usr/local/bin/sclang ]; then
-    oscsend localhost 4001 /oled/gClear ii 3 1
-    oscsend localhost 4001 /oled/aux/line/1 s "linking sclang"
-    sudo ~/scripts/remount-rw.sh
-    sudo ln -s /usr/bin/sclang /usr/local/bin/sclang
-    sudo ~/scripts/remount-ro.sh
 fi
 
-
-
-which jackd
-
-if [ ! $? -eq 0 ]; then 
-    wget -q --spider http://google.com
-
-    if [ ! $? -eq 0 ]; then
-        oscsend localhost 4001 /oled/gClear ii 3 1
-        oscsend localhost 4001 /oled/aux/line/1 s "Connect Internet"
-        oscsend localhost 4001 /oled/aux/line/2 s "Then try again"
-        cd ..
-        rm -rf $1
-        exit 128
-    fi   
-    
-    oscsend localhost 4001 /oled/gClear ii 3 1
-    oscsend localhost 4001 /oled/aux/line/1 s "Installing jackd"
-    sudo ~/scripts/remount-rw.sh
-    sudo mv /etc/apt/sources.list /etc/apt/sources.list/bak
-    sudo cp ./sources.list /etc/apt/sources.list
-    sudo apt-get -y update
+if ! [ -x /usr/bin/sclang ] || ! [ -x /usr/bin/scsynth ] || ! command -v jackd > /dev/null; then
+    # offline install: prereqs/debs holds every package a stock OS 5.1 image is
+    # missing for SC 3.13 + jackd2, so apt resolves everything locally
+    status "Installing prereq" "SC 3.13 + jackd"
+    sudo $FW_DIR/scripts/remount-rw.sh
     echo 'jackd2 jackd/tweak_rt_limits boolean true' | sudo debconf-set-selections
-    sudo -E apt-get -y install jackd2
-    if [ ! $? -eq 0 ]; then
-        oscsend localhost 4001 /oled/aux/line/1 s "jackd install failed"
-        sudo ~/scripts/remount-ro.sh
-        cd ..
-        rm -rf $1
+    # don't trust apt's exit code: the OS 5.1 image ships with initramfs-tools
+    # half-configured, and its trigger fails on every install (harmless, the
+    # Organelle doesn't boot from an initramfs). Check for the binaries instead.
+    sudo -E apt-get install -y --no-install-recommends --no-download ./prereqs/debs/*.deb
+    sudo $FW_DIR/scripts/remount-ro.sh
+
+    if ! [ -x /usr/bin/sclang ] || ! [ -x /usr/bin/scsynth ] || ! command -v jackd > /dev/null; then
+        fail "apt install"
     fi
-    sudo ~/scripts/remount-ro.sh
 fi
 
 exit 1
-

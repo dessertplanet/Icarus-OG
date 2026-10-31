@@ -1,6 +1,7 @@
 //An attempt at a mother.scd that meets the needs of complex supercollider patches
 
-~mainPatch = "/tmp/patch/main.scd".standardizePath;
+//not main.scd: that name makes the OS launch sclang directly, skipping run.sh
+~mainPatch = "/tmp/patch/patch.scd".standardizePath;
 
 //Environment variables
 ~mother = "localhost";
